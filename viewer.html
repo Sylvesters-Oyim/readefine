@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Readefine PDF</title>
+  <link rel="icon" href="icons/32.png">
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <header class="bar">
+    <strong class="brand">Rea<em>define</em></strong>
+    <span id="name" class="name">No file open</span>
+    <span class="spacer"></span>
+    <span id="pages" class="muted"></span>
+    <button id="zoomOut" title="Zoom out">−</button>
+    <span id="zoom" class="muted">100%</span>
+    <button id="zoomIn" title="Zoom in">+</button>
+    <label class="btn">Open PDF…<input id="pick" type="file" accept="application/pdf,.pdf" hidden></label>
+    <a id="original" class="btn" hidden title="Open in the browser's own PDF viewer">Browser viewer</a>
+  </header>
+  <main id="doc">
+    <div id="drop" class="drop">
+      <p><strong>Drop a PDF here</strong> or use <em>Open PDF…</em></p>
+      <p class="muted">Select or double-click any word to define and save it.</p>
+      <p id="err" class="err"></p>
+    </div>
+  </main>
+  <script src="content.js"></script>
+  <script type="module" src="viewer.js"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Readefine</title>
+  <link rel="icon" href="icons/32.png">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">R</span><span>Rea<em>define</em></span></div>
+    <nav>
+      <a href="#review" data-tab="review">Review <span id="dueBadge" class="pill"></span></a>
+      <a href="#words" data-tab="words">Words</a>
+      <a href="#clips" data-tab="clips">Clips</a>
+      <a href="#readings" data-tab="readings">Readings</a>
+      <a href="#settings" data-tab="settings">Settings</a>
+    </nav>
+  </header>
+
+  <div class="layout" id="layout">
+  <section class="stats" id="stats"></section>
+
+  <main>
+    <section id="tab-review" class="tab"></section>
+
+    <section id="tab-words" class="tab" hidden>
+      <div class="tools">
+        <input id="search" type="search" placeholder="Search your words…">
+        <div class="filters" id="filters">
+          <button data-f="all" class="on">All</button>
+          <button data-f="due">Due</button>
+          <button data-f="new">New</button>
+          <button data-f="learning">Learning</button>
+          <button data-f="known">Known</button>
+        </div>
+      </div>
+      <ul id="wordList" class="list"></ul>
+    </section>
+
+    <section id="tab-clips" class="tab" hidden></section>
+
+    <section id="tab-readings" class="tab" hidden>
+      <p class="hint">Every page and PDF you looked words up in, with the words that tripped you up there.</p>
+      <ul id="readingList" class="list"></ul>
+    </section>
+
+    <section id="tab-settings" class="tab" hidden>
+      <form id="settings" class="settings">
+        <fieldset>
+        <h3>Teach-back reminders</h3>
+        <label><input type="checkbox" name="reminders"> Send desktop reminders when words are due</label>
+        <label>At most every
+          <select name="everyHours">
+            <option value="1">1 hour</option><option value="2">2 hours</option><option value="3">3 hours</option>
+            <option value="6">6 hours</option><option value="12">12 hours</option><option value="24">day</option>
+          </select>
+        </label>
+        <label>Quiet from <input type="number" name="quietStart" min="0" max="23"> :00 to
+          <input type="number" name="quietEnd" min="0" max="23"> :00</label>
+        <p><button type="button" id="testNotify">Send a test reminder</button></p>
+        </fieldset>
+        <fieldset>
+        <h3>Reading</h3>
+        <label><input type="checkbox" name="dblclick"> Double-click a word to define it instantly</label>
+        <label><input type="checkbox" name="autoPdf"> Open PDFs in Readefine's viewer (so you can highlight in them)</label>
+        </fieldset>
+        <fieldset>
+        <h3>Your data</h3>
+        <p class="hint">Everything stays in this browser. Export a backup any time.</p>
+        <p><button type="button" id="export">Export backup (JSON)</button>
+          <label class="btn">Import backup<input id="import" type="file" accept=".json" hidden></label></p>
+        <p id="saved" class="hint"></p>
+        </fieldset>
+      </form>
+    </section>
+  </main>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

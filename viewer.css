@@ -1,0 +1,38 @@
+@font-face { font-family: 'Fraunces'; src: url('fonts/fraunces.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Fraunces'; src: url('fonts/fraunces-italic.woff2') format('woff2'); font-weight: 100 900; font-style: italic; font-display: swap; }
+:root {
+  --bg: #e9e6df; --bar: #fffdf8; --ink: #1d2433; --muted: #6b7280; --line: #e3ddd0; --accent: #2f6f5e;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #17191d; --bar: #23262d; --ink: #e8e6e1; --muted: #9aa1ad; --line: #3a3e47; --accent: #7cc4ad; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, "Segoe UI", sans-serif; }
+.bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.brand { font: 600 17px Fraunces, Georgia, serif; }
+.brand em { font-style: italic; font-weight: 500; }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+.spacer { flex: 1; }
+.muted { color: var(--muted); }
+button, .btn { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 6px;
+  padding: 4px 10px; font: inherit; cursor: pointer; text-decoration: none; }
+button:hover, .btn:hover { border-color: var(--accent); color: var(--accent); }
+#doc { padding: 20px 16px 60px; }
+.drop { max-width: 520px; margin: 12vh auto; padding: 40px; text-align: center; border: 2px dashed var(--line);
+  border-radius: 14px; background: var(--bar); }
+.drop.over { border-color: var(--accent); }
+.err { color: #b4472b; }
+.page { position: relative; margin: 0 auto 16px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+.page canvas { display: block; width: 100%; height: 100%; }
+
+/* pdf.js text layer (from pdfjs-dist web/pdf_viewer.css) — invisible text you can select */
+.textLayer { position: absolute; text-align: initial; inset: 0; overflow: clip; opacity: 1; line-height: 1;
+  text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; caret-color: CanvasText; z-index: 0; }
+.textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.textLayer > :not(.markedContent), .textLayer .markedContent span:not(.markedContent) { z-index: 1; }
+.textLayer span.markedContent { top: 0; height: 0; }
+.textLayer ::selection { background: rgba(47, 111, 94, .35); }
+.textLayer br::selection { background: transparent; }
+.textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+.textLayer.selecting .endOfContent { top: 0; }

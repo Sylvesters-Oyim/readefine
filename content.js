@@ -1,0 +1,360 @@
+// Readefine in-page layer: select a word → definition card. Also loaded by viewer.html for PDFs.
+(() => {
+  if (window.__readefine) return;
+  window.__readefine = true;
+
+  let dblclick = true;
+  chrome.storage.local.get('settings').then(({ settings = {} }) => {
+    if (settings.dblclick === false) dblclick = false;
+  });
+  chrome.storage.onChanged.addListener((c) => {
+    if (c.settings) dblclick = c.settings.newValue?.dblclick !== false;
+  });
+
+  // ---------- Shadow-DOM host so page CSS can't touch our UI ----------
+  const host = document.createElement('readefine-layer');
+  host.style.cssText = 'position:absolute;top:0;left:0;width:0;height:0;z-index:2147483647;';
+  const root = host.attachShadow({ mode: 'closed' });
+  // Brand serif for the card. Pages with strict font CSP just fall back to Georgia.
+  try {
+    for (const [file, style] of [['fraunces.woff2', 'normal'], ['fraunces-italic.woff2', 'italic']]) {
+      const f = new FontFace('Readefine Serif', `url(${chrome.runtime.getURL(`fonts/${file}`)})`, { style, weight: '100 900' });
+      document.fonts.add(f);
+      f.load().catch(() => {});
+    }
+  } catch { /* FontFace unsupported */ }
+
+  root.innerHTML = `<style>
+    :host { all: initial; }
+    * { box-sizing: border-box; }
+    .chip, .card {
+      --ink: #1b2230; --muted: #737784; --bg: #f6f1e7; --card: #fffdf8; --line: #e6dcc8; --accent: #17695a;
+      --marker: #ffd84d; --marker-soft: #fff1b8; --serif: 'Readefine Serif', Georgia, 'Times New Roman', serif;
+      position: absolute; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--ink); background: var(--card); border: 1px solid var(--line);
+      box-shadow: 0 2px 6px rgba(27,34,48,.08), 0 18px 44px rgba(27,34,48,.18); border-radius: 16px;
+      animation: pop .18s cubic-bezier(.2,.8,.2,1) both; transform-origin: top left; }
+    @keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+    @keyframes swipe { from { background-size: 0% 50%; } to { background-size: 100% 50%; } }
+    @media (prefers-reduced-motion: reduce) { .chip, .card, .word { animation: none !important; } }
+    .chip { display: flex; overflow: hidden; white-space: nowrap; user-select: none; border-radius: 999px;
+      background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600; font-size: 13px; }
+    .chip span { padding: 6px 13px; cursor: pointer; }
+    .chip span + span { border-left: 1px solid rgba(255,255,255,.18); }
+    .chip span:hover { background: rgba(255,255,255,.12); }
+    .card { width: 350px; max-width: calc(100vw - 24px); padding: 16px 18px 12px; }
+    .card::before { content: ''; position: absolute; left: 18px; right: 18px; top: 0; height: 3px; border-radius: 0 0 3px 3px;
+      background: linear-gradient(90deg, var(--accent), var(--marker)); }
+    .head { display: flex; align-items: baseline; gap: 8px; padding-right: 22px; flex-wrap: wrap; }
+    .word { font: 600 25px/1.15 var(--serif); letter-spacing: -.01em;
+      background-image: linear-gradient(100deg, transparent 0 2%, rgba(255,216,77,.85) 3% 97%, transparent 98%);
+      background-repeat: no-repeat; background-position: 0 80%; background-size: 100% 50%;
+      animation: swipe .5s .1s cubic-bezier(.2,.8,.2,1) both; padding: 0 2px; }
+    .ph { color: var(--muted); font-size: 13px; }
+    .x { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 18px;
+      color: var(--muted); cursor: pointer; line-height: 1; border-radius: 6px; padding: 2px 5px; }
+    .x:hover { background: var(--bg); }
+    .pos { margin-top: 12px; font: italic 500 14px var(--serif); color: var(--accent); }
+    ol { margin: 4px 0 0; padding-left: 20px; }
+    .body { max-height: 260px; overflow: auto; margin-right: -8px; padding-right: 8px; }
+    li { margin: 4px 0; }
+    li::marker { color: var(--muted); }
+    .ex { color: var(--muted); font: italic 13.5px var(--serif); }
+    .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px;
+      padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); gap: 8px; }
+    .foot button { border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; font-weight: 600; padding: 0; }
+    .foot button:hover { text-decoration: underline; }
+    .saved { display: inline-flex; gap: 6px; align-items: center; color: var(--accent); font-weight: 600; }
+    .saved .when { color: var(--muted); font-weight: 400; }
+    .muted { color: var(--muted); }
+    .quote { font: 14.5px/1.55 var(--serif); border-left: 3px solid var(--marker); padding-left: 11px; margin: 10px 0 8px;
+      max-height: 100px; overflow: hidden; color: var(--ink); opacity: .85; }
+    .cite { font-size: 13px; color: var(--muted); }
+    .cite b { color: var(--accent); }
+    textarea, select { width: 100%; font: 14px/1.45 system-ui, sans-serif; color: inherit; background: var(--bg);
+      border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-top: 10px; }
+    textarea { min-height: 60px; resize: vertical; }
+    textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .row select { margin: 0; flex: 1; }
+    .btn { border: 0; background: var(--ink); color: var(--bg); border-radius: 10px; padding: 8px 14px;
+      font: 600 13px system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+    .btn:hover { background: var(--accent); }
+    .dots::after { content: '…'; animation: d 1s steps(3) infinite; }
+    @keyframes d { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+    @media (prefers-color-scheme: dark) {
+      .chip, .card { --ink: #eee9df; --muted: #9a9ea8; --bg: #13151a; --card: #1d2027; --line: #2d313a; --accent: #6fd3b4;
+        box-shadow: 0 2px 6px rgba(0,0,0,.4), 0 18px 44px rgba(0,0,0,.5); }
+      .chip { background: var(--marker); border-color: var(--marker); color: #1b2230; }
+      .chip span + span { border-color: rgba(0,0,0,.15); }
+      .chip span:hover { background: rgba(0,0,0,.08); }
+      .btn { background: var(--accent); color: #0f1a17; }
+    }
+  </style>`;
+  const mount = () => { if (!host.isConnected) document.documentElement.appendChild(host); };
+
+  let chip = null, card = null;
+  const clear = () => { chip?.remove(); card?.remove(); chip = card = null; };
+
+  // ---------- Selection helpers ----------
+  function cleanSelection(raw) {
+    const t = raw.replace(/\s+/g, ' ').trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+    if (!t || t.length > 60 || !/\p{L}/u.test(t) || t.split(' ').length > 5) return null;
+    return t;
+  }
+
+  function sentenceAround(range, text) {
+    let el = range.startContainer;
+    if (el.nodeType !== 1) el = el.parentElement;
+    if (!el) return '';
+    const block = el.closest('p,li,td,th,dd,blockquote,figcaption,h1,h2,h3,h4,h5,h6,.textLayer') || el.parentElement || el;
+    // PDF text layers put each line in its own span with <br>s between: rejoin with spaces.
+    const raw = block.classList.contains('textLayer')
+      ? [...block.querySelectorAll('span:not(.markedContent), br')]
+        .map((n) => (n.tagName === 'BR' ? ' ' : n.textContent)).join('')
+      : block.textContent || '';
+    const full = raw.replace(/\s+/g, ' ').trim();
+    const lower = text.toLowerCase();
+    const sentences = full.match(/[^.!?]+(?:[.!?]+|$)/g) || [full];
+    let s = (sentences.find((x) => x.toLowerCase().includes(lower)) || '').trim();
+    if (s.length > 320) {
+      const i = s.toLowerCase().indexOf(lower);
+      s = `…${s.slice(Math.max(0, i - 150), i + text.length + 150).trim()}…`;
+    }
+    return s;
+  }
+
+  // Page coordinates just below the selection.
+  function anchor(range) {
+    const r = range.getBoundingClientRect();
+    return { x: r.left + window.scrollX, y: r.bottom + window.scrollY + 8, w: r.width };
+  }
+
+  function place(el, pos, width) {
+    const maxX = window.scrollX + document.documentElement.clientWidth - width - 12;
+    el.style.left = `${Math.max(window.scrollX + 12, Math.min(pos.x, maxX))}px`;
+    el.style.top = `${pos.y}px`;
+  }
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---------- Card ----------
+  async function define(text, pos, sentence) {
+    clear();
+    mount();
+    card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="head"><span class="word">${esc(text)}</span></div>
+      <p class="muted dots">Looking it up</p>`;
+    root.appendChild(card);
+    place(card, pos, 340);
+    const mine = card;
+
+    let res;
+    try {
+      res = await chrome.runtime.sendMessage({
+        type: 'define', text, sentence,
+        url: window.__readefineSource || location.href,
+        title: window.__readefineTitle || document.title,
+      });
+    } catch {
+      res = { ok: false, error: 'Readefine was updated — reload this page to keep using it.' };
+    }
+    if (card !== mine) return; // closed or replaced while we waited
+
+    if (!res.ok) {
+      card.innerHTML = `<button class="x" title="Close">×</button>
+        <div class="head"><span class="word">${esc(text)}</span></div>
+        <p class="muted">${esc(res.error || 'No definition found. Try selecting a single word or the base form.')}</p>`;
+    } else {
+      const w = res.entry;
+      card.innerHTML = `<button class="x" title="Close">×</button>
+        <div class="head"><span class="word">${esc(w.word)}</span><span class="ph">${esc(w.phonetic)}</span></div>
+        <div class="body">${w.meanings.map((m) => `<div class="pos">${esc(m.pos)}</div><ol>${m.defs.slice(0, 2).map((d) =>
+          `<li>${esc(d.text)}${d.example ? ` <span class="ex">“${esc(d.example)}”</span>` : ''}</li>`).join('')}</ol>`).join('')}</div>
+        <div class="foot">
+          <span class="saved">${res.repeat ? `Looked up ${w.lookups}×` : `Saved ✓ <span class="when">${new Date(w.added).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>`}
+            ${res.repeat ? '' : '<button data-undo>Undo</button>'}</span>
+          <span>${esc(w.source)} · <button data-open>My words</button></span>
+        </div>`;
+      card.querySelector('[data-undo]')?.addEventListener('click', async () => {
+        await chrome.runtime.sendMessage({ type: 'remove', key: res.key });
+        card.querySelector('.saved').textContent = 'Not saved';
+      });
+      card.querySelector('[data-open]').addEventListener('click', () =>
+        chrome.runtime.sendMessage({ type: 'openApp', hash: '#words' }));
+    }
+    card.querySelector('.x').addEventListener('click', clear);
+  }
+
+  // ---------- Clips: save a passage with its citation ----------
+
+  // PDF selections break lines (and hyphenate words) mid-sentence: stitch them back.
+  const cleanClip = (raw) => raw.replace(/(\p{L})-\s*\n\s*(\p{Ll})/gu, '$1$2').replace(/\s+/g, ' ').trim().slice(0, 8000);
+
+  function parseAuthor(s) {
+    s = s.replace(/\s+/g, ' ').trim();
+    if (s.includes(',')) {
+      const [family, given] = s.split(/,\s*/);
+      return { family, given: given || '' };
+    }
+    const parts = s.split(' ');
+    return parts.length > 1 ? { family: parts.pop(), given: parts.join(' ') } : { family: s, given: '' };
+  }
+
+  // Journals embed citation metadata in <meta> tags (Google Scholar's citation_* convention).
+  function pageCitation() {
+    if (window.__readefineCitation) return window.__readefineCitation;
+    const all = (...names) => names.flatMap((n) =>
+      [...document.querySelectorAll(`meta[name="${n}" i], meta[property="${n}" i]`)].map((m) => (m.content || '').trim()))
+      .filter(Boolean);
+    const one = (...names) => all(...names)[0] || '';
+    let authors = all('citation_author');
+    if (!authors.length) authors = all('dc.creator', 'author', 'article:author', 'parsely-author').filter((a) => !/^https?:/.test(a));
+    if (authors.length === 1 && authors[0].includes(';')) authors = authors[0].split(';');
+    const doiRaw = one('citation_doi', 'prism.doi', 'bepress_citation_doi', 'dc.identifier')
+      || (location.href.match(/10\.\d{4,9}\/[^\s?#&]+/) || [''])[0];
+    const doi = doiRaw.replace(/^(doi:\s*|https?:\/\/(dx\.)?doi\.org\/)/i, '');
+    const date = one('citation_publication_date', 'citation_date', 'citation_online_date', 'dc.date',
+      'prism.publicationDate', 'article:published_time');
+    const first = one('citation_firstpage');
+    const last = one('citation_lastpage');
+    return {
+      title: one('citation_title', 'dc.title', 'og:title') || document.title,
+      authors: authors.map(parseAuthor),
+      year: (date.match(/\b(1[89]|20)\d{2}\b/) || [''])[0],
+      journal: one('citation_journal_title', 'prism.publicationName', 'citation_conference_title'),
+      publisher: one('citation_publisher', 'dc.publisher', 'og:site_name') || location.hostname.replace(/^www\./, ''),
+      volume: one('citation_volume', 'prism.volume'),
+      issue: one('citation_issue', 'prism.number'),
+      pages: first && last ? `${first}-${last}` : first,
+      doi: /^10\.\d{4,9}\//.test(doi) ? doi : '',
+      url: document.querySelector('link[rel=canonical]')?.href || location.href,
+    };
+  }
+
+  const pageOf = (range) => {
+    let el = range.startContainer;
+    if (el.nodeType !== 1) el = el.parentElement;
+    return Number(el?.closest('.page')?.dataset.n) || null;
+  };
+
+  const shortCite = (s) => {
+    const a = s.authors || [];
+    const who = !a.length ? (s.publisher || s.title || '') : a.length === 1 ? a[0].family
+      : a.length === 2 ? `${a[0].family} & ${a[1].family}` : `${a[0].family} et al.`;
+    return `${who} (${s.year || 'n.d.'})`;
+  };
+
+  async function clipIt(text, pos, page) {
+    clear();
+    mount();
+    card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="head"><span class="word" style="font-size:16px">📌 Clipping</span></div>
+      <div class="quote">${esc(text)}</div><p class="muted dots">Finding the citation</p>`;
+    root.appendChild(card);
+    place(card, pos, 340);
+    const mine = card;
+
+    let res;
+    try {
+      res = await chrome.runtime.sendMessage({ type: 'clip', text, page, citation: pageCitation() });
+    } catch {
+      res = { ok: false };
+    }
+    if (card !== mine) return;
+    if (!res?.ok) {
+      card.innerHTML = '<button class="x" title="Close">×</button><p class="muted">Couldn\'t clip that — reload the page and try again.</p>';
+      card.querySelector('.x').addEventListener('click', clear);
+      return;
+    }
+    const s = res.source;
+    card.innerHTML = `<button class="x" title="Close">×</button>
+      <div class="head"><span class="word" style="font-size:16px">📌 Clipped</span></div>
+      <div class="quote">${esc(text)}</div>
+      <div class="cite"><b>${esc(shortCite(s))}${page ? `, p. ${page}` : ''}</b> · ${esc(s.journal || s.title || '')} · ${new Date(res.clip.created).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+      <textarea placeholder="Your thought: why this matters, how you'll use it (optional)"></textarea>
+      <div class="row">
+        <select title="Project">${res.projects.map((p) =>
+          `<option value="${esc(p.id)}" ${p.id === res.currentProject ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+        <button class="btn" data-done>Done</button>
+      </div>
+      <div class="foot"><span class="muted">Ctrl + Enter to save</span><button data-open>Open clips</button></div>`;
+    const note = card.querySelector('textarea');
+    const project = card.querySelector('select');
+    const save = async () => {
+      await chrome.runtime.sendMessage({ type: 'updateClip', id: res.clip.id, note: note.value.trim(), project: project.value });
+    };
+    note.focus();
+    note.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.ctrlKey) save().then(clear); });
+    project.addEventListener('change', save);
+    card.querySelector('[data-done]').addEventListener('click', () => save().then(clear));
+    card.querySelector('[data-open]').addEventListener('click', () => save().then(() =>
+      chrome.runtime.sendMessage({ type: 'openApp', hash: '#clips' })));
+    card.querySelector('.x').addEventListener('click', () => save().then(clear));
+  }
+
+  function showChip(word, range) {
+    clear();
+    mount();
+    const pos = anchor(range);
+    const text = cleanClip(window.getSelection().toString());
+    const sentence = word ? sentenceAround(range, word) : '';
+    const page = pageOf(range);
+    chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `${word ? '<span data-define>📖 Define</span>' : ''}<span data-clip>📌 Clip</span>`;
+    chip.addEventListener('mousedown', (e) => e.preventDefault()); // keep the selection
+    chip.querySelector('[data-define]')?.addEventListener('click', () => define(word, pos, sentence));
+    chip.querySelector('[data-clip]').addEventListener('click', () => clipIt(text, pos, page));
+    root.appendChild(chip);
+    place(chip, pos, word ? 170 : 80);
+  }
+
+  // ---------- Events ----------
+  const editable = (el) => el?.closest?.('input,textarea,[contenteditable=""],[contenteditable="true"]');
+
+  document.addEventListener('mouseup', (e) => {
+    if (e.button !== 0 || e.composedPath().includes(host) || editable(e.target)) return;
+    setTimeout(() => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      const raw = sel.toString();
+      const word = cleanSelection(raw);
+      const range = sel.getRangeAt(0);
+      if (e.detail === 2 && dblclick && word) define(word, anchor(range), sentenceAround(range, word));
+      else if (e.detail !== 2 && /\p{L}/u.test(raw)) showChip(word, range); // drag or triple-click (paragraph)
+    }, 10);
+  }, true);
+
+  document.addEventListener('mousedown', (e) => {
+    if (!e.composedPath().includes(host)) {
+      chip?.remove(); chip = null;
+      if (card && e.detail < 2) { card.remove(); card = null; }
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') clear(); });
+
+  // Right-click menu → "Define with Readefine" / "Clip selection to Readefine"
+  chrome.runtime.onMessage.addListener((msg) => {
+    const sel = window.getSelection();
+    if (msg.type === 'clipSelection') {
+      const text = cleanClip(sel?.toString() || msg.text || '');
+      if (!text) return;
+      const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
+      clipIt(text, range ? anchor(range) : { x: window.scrollX + 40, y: window.scrollY + 40 }, range ? pageOf(range) : null);
+      return;
+    }
+    if (msg.type !== 'show') return;
+    const text = cleanSelection(msg.text || '');
+    if (!text) return;
+    if (sel?.rangeCount) {
+      const range = sel.getRangeAt(0);
+      define(text, anchor(range), sentenceAround(range, text));
+    } else {
+      define(text, { x: window.scrollX + 40, y: window.scrollY + 40 }, '');
+    }
+  });
+})();

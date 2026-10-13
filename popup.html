@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    body { width: 360px; min-height: 0; padding: 0; background-attachment: scroll; }
+    .head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 6px; }
+    .brand { font-size: 21px; }
+    .logo { width: 30px; height: 30px; font-size: 17px; border-radius: 9px; }
+    .logo::after { left: 6px; right: 6px; bottom: 6px; height: 3px; }
+    .pad { padding: 8px 18px 16px; }
+    .today { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; background: var(--card);
+      border: 1px solid var(--line); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); animation: rise .3s ease both; }
+    .ring { width: 72px; height: 72px; }
+    .ring b { font-size: 21px; }
+    .ring span { font-size: 9px; }
+    .today h3 { font: 500 18px/1.25 var(--serif); margin: 0 0 8px; }
+    .today h3 em { font-style: italic; }
+    .today button { width: 100%; }
+    .due { display: flex; gap: 5px; flex-wrap: wrap; margin: -2px 0 8px; }
+    .due span { font: 600 13px var(--serif); padding: 1px 9px; border-radius: 999px; background: var(--marker-soft); color: var(--marker-ink); }
+    form { display: flex; gap: 6px; margin-top: 14px; position: relative; }
+    form input { flex: 1; padding: 10px 12px 10px 34px; border: 1px solid var(--line-2); border-radius: 12px;
+      background: var(--card); color: var(--ink); font: inherit; }
+    form::before { content: '⌕'; position: absolute; left: 12px; top: 50%; transform: translateY(-52%); color: var(--muted); font-size: 17px; }
+    #result:not(:empty) { margin-top: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+      padding: 12px 14px; font-size: 14px; animation: rise .25s ease both; }
+    #result .w { font-size: 21px; }
+    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+    .tiles button { display: grid; gap: 2px; justify-items: start; text-align: left; padding: 10px 12px; border-radius: 14px; }
+    .tiles b { font: 600 20px var(--serif); }
+    .tiles span { font-size: 12px; color: var(--muted); }
+    .tiles .ico { font-size: 18px; }
+    .foot { display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <div class="brand"><span class="logo">R</span><span>Rea<em>define</em></span></div>
+    <span class="chip-stat streak" id="streak"></span>
+  </div>
+  <div class="pad">
+    <div class="today" id="today"></div>
+    <form id="q"><input id="word" placeholder="Look up any word…" autocomplete="off"><button class="primary">Define</button></form>
+    <div id="result"></div>
+    <div class="tiles">
+      <button id="words"><span class="ico">📖</span><b id="nWords">0</b><span>words</span></button>
+      <button id="clips"><span class="ico">📌</span><b id="nClips">0</b><span>clips</span></button>
+      <button id="pdf"><span class="ico">📄</span><b>PDF</b><span>open one</span></button>
+    </div>
+    <div class="foot"><span>Double-click any word to define it</span><span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd></span></div>
+  </div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Personal data exported from Settings
+readefine-backup-*.json
+readefine-*.json
+
+# Packaged builds and the private signing key Chrome generates
+*.crx
+*.pem
+*.zip
+
+# OS clutter
+Thumbs.db
+desktop.ini
+.DS_Store
