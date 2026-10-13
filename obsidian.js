@@ -206,14 +206,28 @@ export async function rememberVault(handle) {
 /** Export everything to the remembered vault, asking for a folder the first time (or when `pick`). */
 export async function exportToObsidian({ pick = false } = {}) {
   const { getWords, getClipData } = await import('./store.js');
+  const { citeStyle: style = 'apa' } = await chrome.storage.local.get('citeStyle');
+  const build = async () => buildVault({ words: await getWords(), ...(await getClipData()) }, style);
+
+  // Firefox (and others) can't write into a folder: hand over a zip to unzip into the vault instead.
+  if (!window.showDirectoryPicker) {
+    const { makeZip } = await import('./zip.js');
+    const files = await build();
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([makeZip(files)], { type: 'application/zip' })),
+      download: 'Readefine for Obsidian.zip',
+    });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    return { n: Object.keys(files).length, vault: null };
+  }
+
   let dir = pick ? null : await savedVault();
   if (dir && (await dir.requestPermission({ mode: 'readwrite' })) !== 'granted') dir = null;
   if (!dir) {
     dir = await window.showDirectoryPicker({ id: 'obsidian-vault', mode: 'readwrite' });
     await rememberVault(dir);
   }
-  const { citeStyle = 'apa' } = await chrome.storage.local.get('citeStyle');
-  const files = buildVault({ words: await getWords(), ...(await getClipData()) }, citeStyle);
-  const n = await writeVault(dir, files);
+  const n = await writeVault(dir, await build());
   return { n, vault: dir.name };
 }

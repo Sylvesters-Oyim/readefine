@@ -359,6 +359,10 @@ async function obsidian(pick) {
   try {
     out.textContent = 'Exporting…';
     const { n, vault } = await exportToObsidian({ pick });
+    if (!vault) {
+      out.textContent = `Downloaded ${n} notes as a zip. Unzip it into your Obsidian vault folder.`;
+      return;
+    }
     out.textContent = `Done: ${n} notes written to “${vault}/Readefine”. Open Obsidian to see them.`;
     $('#obsidian').textContent = `Export again to “${vault}”`;
   } catch (err) {
@@ -367,6 +371,7 @@ async function obsidian(pick) {
 }
 $('#obsidian').onclick = () => obsidian(false);
 $('#obsidianPick').onclick = () => obsidian(true);
+if (!window.showDirectoryPicker) $('#obsidianPick').hidden = true; // e.g. Firefox: zip download instead
 savedVault().then((v) => { if (v) $('#obsidian').textContent = `Export again to “${v.name}”`; }).catch(() => {});
 $('#testNotify').onclick = () => chrome.runtime.sendMessage({ type: 'testNotify' });
 $('#export').onclick = async () => {

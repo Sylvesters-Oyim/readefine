@@ -11,3 +11,6 @@ readefine-*.json
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Build output
+dist/

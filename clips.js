@@ -337,7 +337,7 @@ async function onClick(e) {
   } else if (act === 'obsidian') {
     try {
       const { n, vault } = await exportToObsidian();
-      toast(`${n} notes written to “${vault}/Readefine”.`);
+      toast(vault ? `${n} notes written to “${vault}/Readefine”.` : `Downloaded ${n} notes as a zip: unzip it into your vault.`);
     } catch (err) {
       if (err.name !== 'AbortError') toast(`Obsidian export failed: ${err.message}`);
     }

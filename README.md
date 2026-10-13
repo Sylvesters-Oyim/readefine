@@ -14,6 +14,18 @@ Readefine keeps it — with the sentence you found it in — then asks you to ex
 For local PDFs (`file://`), also switch on **Allow access to file URLs** on Readefine's card in
 `chrome://extensions`. After editing any file here, press the ↻ reload button on that card.
 
+## Firefox
+
+Run `node build.mjs`. It writes `dist/readefine-chrome-<version>.zip`, `dist/readefine-firefox-<version>.zip`
+and an unpacked `dist/firefox/`.
+
+- **Quick test:** `about:debugging` → *This Firefox* → *Load Temporary Add-on* → pick `dist/firefox/manifest.json`.
+  Firefox removes temporary add-ons when it restarts.
+- **Keep it installed:** upload the Firefox zip to addons.mozilla.org as **Unlisted** (private, not in the store).
+  Mozilla signs it and gives back an `.xpi` that installs permanently.
+- After installing: `about:addons` → Readefine → *Permissions* → allow access to all websites.
+- In Firefox the Obsidian export downloads a zip to unzip into your vault (Firefox can't write to folders).
+
 ## Using it
 
 - **Double-click** a word → definition card, saved automatically (Undo if you didn't mean it).
@@ -58,6 +70,8 @@ gene names, and phrases. Inflected forms ("polymorphisms", "ran") are filed unde
 | `clips.js` | Clips tab: projects, outline, drag and drop, exports |
 | `cite.js` | Citation styles, BibTeX and RIS |
 | `obsidian.js` | Export to an Obsidian vault as linked notes |
+| `zip.js` | Small zip writer (Obsidian zip export, builds) |
+| `build.mjs` | Builds the Chrome and Firefox packages into `dist/` |
 | `popup.*` | Toolbar popup |
 | `viewer.*` | PDF viewer built on pdf.js (`lib/`, Apache-2.0) |
 | `fonts/` | Fraunces typeface (SIL Open Font License) |
