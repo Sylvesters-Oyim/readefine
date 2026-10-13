@@ -1,7 +1,7 @@
 // Export everything to an Obsidian vault as linked Markdown notes, under a "Readefine" folder.
 // Words, sources, clips and projects link to each other, so Obsidian's graph shows how your
 // reading connects.
-import { status, humanGap } from './store.js';
+import { status, humanGap, passageLink } from './store.js';
 import { shortCite, reference, inText, toMarkdown } from './cite.js';
 
 const ROOT = 'Readefine';
@@ -114,6 +114,8 @@ export function buildVault({ words, clips, sources, projects }, style = 'apa') {
       `${quote(c.text)}\n`,
       c.note ? `**My note:** ${c.note}\n` : '',
       `— ${toMarkdown(inText(s, style, { n: 1, page: c.page })).replace(/^\[1\]$/, shortCite(s))} · ${info ? link(info.path, 'source') : ''}\n`,
+      // Web pages only: links into the extension's PDF viewer can't be opened from Obsidian.
+      !c.pdf && /^https?:/.test(c.url || '') ? `[Open at this passage](${passageLink({ url: c.url, text: c.text })})\n` : '',
     ].filter(Boolean).join('\n');
   }
 

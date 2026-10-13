@@ -1,5 +1,5 @@
 // Clips tab: per-project library of clipped passages + a drag-and-drop outline, with exports.
-import { getClipData, newProject, newId, ensureProject } from './store.js';
+import { getClipData, newProject, newId, ensureProject, passageLink } from './store.js';
 import { STYLES, esc, shortCite, inText, reference, bibtex, ris, toMarkdown } from './cite.js';
 import { exportToObsidian } from './obsidian.js';
 
@@ -64,7 +64,9 @@ async function copyRich(html, text) {
 
 function card(c, inOutline) {
   const s = D.sources[c.sourceKey] || {};
-  const url = linkOf(s);
+  // Open at the passage itself; fall back to the paper's DOI/URL for clips made before this existed.
+  const at = passageLink({ url: c.url || s.url, text: c.text, page: c.page, pdf: c.pdf });
+  const url = at || linkOf(s);
   const p = project();
   const others = Object.values(D.projects).filter((x) => x.id !== p.id);
   return `<article class="clip" draggable="true" data-id="${esc(c.id)}">
@@ -73,7 +75,7 @@ function card(c, inOutline) {
     <textarea class="note" data-note="${esc(c.id)}" rows="2" placeholder="Your thought: how will you use this?">${esc(c.note)}</textarea>
     <footer>
       <span class="cite" title="${esc(toMarkdown(reference(s, style)))}">${esc(shortCite(s))}${c.page ? `, p. ${esc(c.page)}` : ''}</span>
-      ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" title="Open the source">↗</a>` : ''}
+      ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener" title="${at ? 'Open at this passage' : 'Open the source'}">${at ? 'Go to passage ↗' : '↗'}</a>` : ''}
       <span class="spacer"></span>
       ${!inOutline && p.sections.length ? `<select data-act="place" title="Put in a section"><option value="">Add to…</option>
         ${p.sections.map((x) => `<option value="${esc(x.id)}">${esc(x.title)}</option>`).join('')}</select>` : ''}

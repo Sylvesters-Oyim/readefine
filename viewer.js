@@ -30,7 +30,8 @@ async function open(source, name, originalUrl = '') {
     $('original').hidden = false;
     $('original').href = `${originalUrl}#readefine-off`;
   }
-  layout();
+  await layout();
+  if (target) goToTarget();
   window.__readefineCitation = await pdfCitation(meta, title, window.__readefineSource);
 }
 
@@ -68,7 +69,7 @@ async function layout() {
     for (const e of entries) {
       if (e.isIntersecting && !e.target.dataset.done) {
         e.target.dataset.done = '1';
-        renderPage(e.target, Number(e.target.dataset.n), scale);
+        e.target.rendered = renderPage(e.target, Number(e.target.dataset.n), scale);
       }
     }
   }, { rootMargin: '800px 0px' });
@@ -112,6 +113,61 @@ async function renderPage(div, n, scale) {
   text.appendChild(end);
   text.addEventListener('mousedown', () => text.classList.add('selecting'));
   document.addEventListener('mouseup', () => text.classList.remove('selecting'));
+}
+
+// ---------- Opened from a clip: #page=N&text=… → scroll there and highlight the passage ----------
+const target = (() => {
+  const h = new URLSearchParams(location.hash.slice(1));
+  return h.get('page') || h.get('text') ? { page: Number(h.get('page')) || null, text: h.get('text') || '' } : null;
+})();
+
+// Compare on letters and digits only: PDF text layers split lines, hyphenate and space oddly.
+const squash = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+async function findPage(text) {
+  const needle = squash(text).slice(0, 60);
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const items = (await (await pdf.getPage(n)).getTextContent()).items;
+    if (squash(items.map((i) => i.str).join('')).includes(needle)) return n;
+  }
+  return null;
+}
+
+function findRange(layer, text) {
+  let hay = '';
+  const map = [];
+  const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
+  for (let node; (node = walker.nextNode());) {
+    for (let i = 0; i < node.data.length; i++) {
+      const ch = node.data[i];
+      if (/[\p{L}\p{N}]/u.test(ch)) { hay += ch.toLowerCase(); map.push([node, i]); }
+    }
+  }
+  const needle = squash(text);
+  let len = needle.length;
+  let at = hay.indexOf(needle);
+  if (at < 0) { len = Math.min(60, needle.length); at = hay.indexOf(needle.slice(0, len)); }
+  if (at < 0 || !len) return null;
+  const range = document.createRange();
+  range.setStart(map[at][0], map[at][1]);
+  const [endNode, endOff] = map[at + len - 1];
+  range.setEnd(endNode, endOff + 1);
+  return range;
+}
+
+async function goToTarget() {
+  if (!target.page && target.text) target.page = await findPage(target.text);
+  const div = docEl.querySelector(`.page[data-n="${target.page || 1}"]`);
+  if (!div) return;
+  div.scrollIntoView({ block: 'start' });
+  if (!target.text) return;
+  for (let i = 0; i < 50 && !div.rendered; i++) await new Promise((r) => setTimeout(r, 100));
+  await div.rendered;
+  const range = findRange(div.querySelector('.textLayer'), target.text);
+  if (!range) return;
+  if (window.CSS?.highlights && window.Highlight) CSS.highlights.set('readefine-clip', new Highlight(range));
+  else { getSelection().removeAllRanges(); getSelection().addRange(range); }
+  range.startContainer.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function setZoom(z) {

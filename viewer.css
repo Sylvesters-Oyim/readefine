@@ -36,3 +36,6 @@ button:hover, .btn:hover { border-color: var(--accent); color: var(--accent); }
 .textLayer br::selection { background: transparent; }
 .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
 .textLayer.selecting .endOfContent { top: 0; }
+
+/* A clip opened from Readefine: the passage, highlighted. */
+::highlight(readefine-clip) { background-color: rgba(255, 216, 77, .6); }

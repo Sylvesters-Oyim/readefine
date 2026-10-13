@@ -259,7 +259,10 @@
 
     let res;
     try {
-      res = await chrome.runtime.sendMessage({ type: 'clip', text, page, citation: pageCitation() });
+      res = await chrome.runtime.sendMessage({
+        type: 'clip', text, page, citation: pageCitation(),
+        url: window.__readefineSource || location.href, pdf: Boolean(window.__readefineCitation),
+      });
     } catch {
       res = { ok: false };
     }
@@ -356,5 +359,106 @@
     } else {
       define(text, { x: window.scrollX + 40, y: window.scrollY + 40 }, '');
     }
+  });
+  // ---------- Saved words, underlined wherever you read ----------
+  const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'CODE', 'PRE',
+    'SVG', 'MATH', 'TITLE', 'HEAD', 'READEFINE-MARK', 'READEFINE-LAYER', 'BUTTON']);
+  let matcher = null; // { re, info: Map(lowercase form → { status, title }) }
+  let marking = true;
+  let observer = null;
+
+  const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+
+  function buildMatcher(words) {
+    const info = new Map();
+    for (const w of Object.values(words || {})) {
+      const status = !w.reviews?.length ? 'new' : w.stage >= 4 ? 'known' : 'learning';
+      const def = w.meanings?.[0]?.defs?.[0]?.text || '';
+      const title = `${w.word}: ${def.length > 140 ? `${def.slice(0, 140)}…` : def}  (Readefine · ${status})`;
+      for (const f of [w.word, ...(w.forms || [])]) if (f && f.length >= 3) info.set(f.toLowerCase(), { status, title });
+    }
+    if (!info.size) return null;
+    const alts = [...info.keys()].sort((a, b) => b.length - a.length).map(escapeRe).join('|');
+    // Whole words only, allowing simple endings: obfuscate → obfuscated, obfuscates, obfuscating.
+    return { info, re: new RegExp(`(?<![\\p{L}\\p{N}])(${alts})(?:s|es|d|ed|ing)?(?![\\p{L}\\p{N}])`, 'giu') };
+  }
+
+  function skippable(el) {
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      if (SKIP_TAGS.has(e.tagName) || e.isContentEditable) return true;
+    }
+    return false;
+  }
+
+  function markIn(rootNode) {
+    if (!matcher || !rootNode) return;
+    const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.data.length < 3 || skippable(n.parentElement) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    const targets = [];
+    for (let n, count = 0; (n = walker.nextNode()) && count < 20000; count++) {
+      matcher.re.lastIndex = 0;
+      if (matcher.re.test(n.data)) targets.push(n);
+    }
+    for (const node of targets) {
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      matcher.re.lastIndex = 0;
+      for (const m of node.data.matchAll(matcher.re)) {
+        const meta = matcher.info.get(m[1].toLowerCase());
+        if (!meta) continue;
+        frag.append(node.data.slice(last, m.index));
+        const mark = document.createElement('readefine-mark');
+        mark.textContent = m[0];
+        mark.dataset.status = meta.status;
+        mark.title = meta.title;
+        frag.append(mark);
+        last = m.index + m[0].length;
+      }
+      if (!last) continue;
+      frag.append(node.data.slice(last));
+      node.replaceWith(frag);
+    }
+  }
+
+  function unmarkAll() {
+    for (const m of document.querySelectorAll('readefine-mark')) {
+      const parent = m.parentNode;
+      m.replaceWith(m.textContent);
+      parent?.normalize();
+    }
+  }
+
+  function refreshMarks(words) {
+    observer?.disconnect();
+    unmarkAll();
+    matcher = marking ? buildMatcher(words) : null;
+    if (!matcher || !document.body) return;
+    markIn(document.body);
+    // Pages that load content later (feeds, PDF text layers): mark new bits as they arrive.
+    let pending = [];
+    let timer = null;
+    observer = new MutationObserver((records) => {
+      for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1 && n.tagName !== 'READEFINE-MARK' && n !== host) pending.push(n);
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const batch = pending.filter((n) => n.isConnected);
+        pending = [];
+        observer.disconnect();
+        for (const n of batch) markIn(n);
+        observer.observe(document.body, { childList: true, subtree: true });
+      }, 600);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 300));
+  chrome.storage.local.get(['words', 'settings']).then(({ words, settings = {} }) => {
+    marking = settings.highlightSaved !== false;
+    idle(() => refreshMarks(words));
+  });
+  chrome.storage.onChanged.addListener((c) => {
+    if (c.settings) marking = c.settings.newValue?.highlightSaved !== false;
+    if (c.words || c.settings) chrome.storage.local.get('words').then(({ words }) => idle(() => refreshMarks(words)));
   });
 })();

@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = {
   quietStart: 22,
   quietEnd: 8,
   dblclick: true,
+  highlightSaved: true,
   autoPdf: true,
 };
 
@@ -166,4 +167,30 @@ export function progress(words, clips = {}) {
     total: all.length, ...count, due: dueList(words).length, streak, days,
     today: days.get(dayKey(Date.now())) || 0,
   };
+}
+
+// ---------- Links that open a page at the exact passage ----------
+
+// Text fragments (#:~:text=start,end) make Chrome and Firefox scroll to and highlight the passage.
+const fragPart = (s) => encodeURIComponent(s).replace(/-/g, '%2D');
+
+/**
+ * Where a passage came from, opened at the passage itself.
+ * Web pages use a text fragment; PDFs open in Readefine's viewer at the page, highlighted.
+ */
+export function passageLink({ url, text, page = null, pdf = false }) {
+  if (!url || !/^(https?|file):/.test(url)) return '';
+  const clean = String(text || '').replace(/^…|…$/g, '').replace(/\s+/g, ' ').trim();
+  if (pdf || /\.pdf([?#]|$)/i.test(url)) {
+    const hash = new URLSearchParams();
+    if (page) hash.set('page', page);
+    if (clean) hash.set('text', clean.slice(0, 300));
+    return `${chrome.runtime.getURL('viewer.html')}?file=${encodeURIComponent(url.split('#')[0])}#${hash}`;
+  }
+  if (!clean) return url;
+  const words = clean.split(' ');
+  const frag = words.length <= 8
+    ? fragPart(clean)
+    : `${fragPart(words.slice(0, 4).join(' '))},${fragPart(words.slice(-4).join(' '))}`;
+  return `${url.split('#')[0]}#:~:text=${frag}`;
 }

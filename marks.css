@@ -1,0 +1,11 @@
+/* Saved words, underlined on pages you read. Injected via the manifest so page CSP can't block it. */
+readefine-mark {
+  text-decoration: underline dotted 2px rgba(214, 160, 0, .95);
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: help;
+}
+readefine-mark[data-status="known"] { text-decoration-color: rgba(23, 105, 90, .7); }
+readefine-mark:hover { background: rgba(255, 216, 77, .28); border-radius: 2px; }
+/* PDF text layers draw transparent text over the page image: keep the underline visible there. */
+.textLayer readefine-mark { text-decoration-color: rgba(214, 160, 0, .95); }

@@ -199,7 +199,7 @@ async function crossref(doi) {
   });
 }
 
-async function clip({ text, page = null, citation = {} }) {
+async function clip({ text, page = null, citation = {}, url = '', pdf = false }) {
   const key = sourceKey(citation);
   let { sources = {} } = await chrome.storage.local.get('sources');
   let src = sources[key];
@@ -217,7 +217,7 @@ async function clip({ text, page = null, citation = {} }) {
   const { clips = {} } = await chrome.storage.local.get('clips');
   sources[key] = src;
   const id = newId();
-  clips[id] = { id, text, note: '', page, sourceKey: key, project: currentProject, created: Date.now() };
+  clips[id] = { id, text, note: '', page, url, pdf, sourceKey: key, project: currentProject, created: Date.now() };
   await chrome.storage.local.set({ clips, sources });
   return { ok: true, clip: clips[id], source: src, ...(await projectList()) };
 }

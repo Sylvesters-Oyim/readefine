@@ -1,6 +1,6 @@
 import {
   getWords, saveWords, getSettings, saveSettings, status, dueList, grade, humanGap, keyOf, progress, dayKey,
-  getClipData,
+  getClipData, passageLink,
 } from './store.js';
 import { initClips } from './clips.js';
 import { exportToObsidian, savedVault } from './obsidian.js';
@@ -240,7 +240,10 @@ function wordsBySource() {
 
 function sourceLink(c) {
   const label = esc(c.title || c.url);
-  return /^https?:|^file:/.test(c.url) ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${label}</a>` : label;
+  if (!/^https?:|^file:/.test(c.url || '')) return label;
+  // Context sentences open the page scrolled to where you met the word.
+  const href = c.sentence ? passageLink({ url: c.url, text: c.sentence }) : c.url;
+  return `<a href="${esc(href)}" target="_blank" rel="noopener" title="Open where you met it">${label}</a>`;
 }
 
 function mastery(w) {
@@ -349,6 +352,7 @@ $('#settings').addEventListener('change', async () => {
     quietStart: Number(f.elements.quietStart.value),
     quietEnd: Number(f.elements.quietEnd.value),
     dblclick: f.elements.dblclick.checked,
+    highlightSaved: f.elements.highlightSaved.checked,
     autoPdf: f.elements.autoPdf.checked,
   });
   $('#saved').textContent = 'Saved.';

@@ -36,6 +36,13 @@ and an unpacked `dist/firefox/`.
 - **Review** (dashboard or the reminder notification): type what the word means in your own
   words, compare with the definition, and mark *I got it* / *Not yet*.
 
+## While you read
+
+- **Saved words are underlined** (dotted: yellow while learning, green once known) on any page or PDF.
+  Hover for the meaning. Turn it off in Settings → Reading.
+- **Go to passage ↗** on a clip, or a "Where you met it" link on a word, opens the page scrolled to that
+  exact passage and highlighted. PDFs open in Readefine's viewer at the right page.
+
 ## Clips: literature-review cards
 
 - **Select a passage** (drag, or triple-click a paragraph) → **📌 Clip**. It's saved with its full
@@ -64,7 +71,8 @@ gene names, and phrases. Inflected forms ("polymorphisms", "ran") are filed unde
 | File | Role |
 | --- | --- |
 | `background.js` | Lookups, saving, reminders, badge, PDF redirect |
-| `content.js` | The in-page card (also loaded by the PDF viewer) |
+| `content.js` | The in-page card and saved-word underlines (also loaded by the PDF viewer) |
+| `marks.css` | Underline style for saved words |
 | `store.js` | Storage + spaced-repetition rules, shared by everything |
 | `app.*` | Dashboard: Review, Words, Clips, Readings, Settings |
 | `clips.js` | Clips tab: projects, outline, drag and drop, exports |
