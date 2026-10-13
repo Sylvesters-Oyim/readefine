@@ -1,6 +1,7 @@
 // Clips tab: per-project library of clipped passages + a drag-and-drop outline, with exports.
 import { getClipData, newProject, newId, ensureProject } from './store.js';
 import { STYLES, esc, shortCite, inText, reference, bibtex, ris, toMarkdown } from './cite.js';
+import { exportToObsidian } from './obsidian.js';
 
 let root;
 let D = { clips: {}, sources: {}, projects: {}, currentProject: '' };
@@ -131,6 +132,7 @@ function render() {
         <button data-act="dlMd">Whole project as Markdown (.md)</button>
         <button data-act="dlBib">References as BibTeX (.bib)</button>
         <button data-act="dlRis">References for Zotero / EndNote / Mendeley (.ris)</button>
+        <button data-act="obsidian">Everything to my Obsidian vault</button>
       </div></details>
     </div>
     <div class="board">
@@ -332,6 +334,13 @@ async function onClick(e) {
     download(`${slug(p.name)}.bib`, projectSources().map(bibtex).join('\n\n'), 'application/x-bibtex');
   } else if (act === 'dlRis') {
     download(`${slug(p.name)}.ris`, projectSources().map(ris).join('\n\n'), 'application/x-research-info-systems');
+  } else if (act === 'obsidian') {
+    try {
+      const { n, vault } = await exportToObsidian();
+      toast(`${n} notes written to “${vault}/Readefine”.`);
+    } catch (err) {
+      if (err.name !== 'AbortError') toast(`Obsidian export failed: ${err.message}`);
+    }
   } else if (act === 'copyCard') {
     const blocks = cardBlocks(D.clips[id]);
     await copyRich(blocksToHtml(blocks), blocksToMd(blocks));

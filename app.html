@@ -67,6 +67,14 @@
         <label><input type="checkbox" name="autoPdf"> Open PDFs in Readefine's viewer (so you can highlight in them)</label>
         </fieldset>
         <fieldset>
+        <h3>Obsidian</h3>
+        <p class="hint">Writes every word, clip, source and project as linked notes into a <b>Readefine</b> folder in your vault.
+          That folder is rewritten each time, so keep your own notes outside it.</p>
+        <p><button type="button" class="primary" id="obsidian">Export to Obsidian</button>
+          <button type="button" id="obsidianPick">Choose a different vault…</button></p>
+        <p id="obsidianStatus" class="hint"></p>
+        </fieldset>
+        <fieldset>
         <h3>Your data</h3>
         <p class="hint">Everything stays in this browser. Export a backup any time.</p>
         <p><button type="button" id="export">Export backup (JSON)</button>

@@ -3,6 +3,7 @@ import {
   getClipData,
 } from './store.js';
 import { initClips } from './clips.js';
+import { exportToObsidian, savedVault } from './obsidian.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -353,6 +354,20 @@ $('#settings').addEventListener('change', async () => {
   $('#saved').textContent = 'Saved.';
   setTimeout(() => { $('#saved').textContent = ''; }, 1500);
 });
+async function obsidian(pick) {
+  const out = $('#obsidianStatus');
+  try {
+    out.textContent = 'Exporting…';
+    const { n, vault } = await exportToObsidian({ pick });
+    out.textContent = `Done: ${n} notes written to “${vault}/Readefine”. Open Obsidian to see them.`;
+    $('#obsidian').textContent = `Export again to “${vault}”`;
+  } catch (err) {
+    out.textContent = err.name === 'AbortError' ? '' : `Export failed: ${err.message}`;
+  }
+}
+$('#obsidian').onclick = () => obsidian(false);
+$('#obsidianPick').onclick = () => obsidian(true);
+savedVault().then((v) => { if (v) $('#obsidian').textContent = `Export again to “${v.name}”`; }).catch(() => {});
 $('#testNotify').onclick = () => chrome.runtime.sendMessage({ type: 'testNotify' });
 $('#export').onclick = async () => {
   const d = await getClipData();

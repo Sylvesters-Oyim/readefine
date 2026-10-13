@@ -227,6 +227,7 @@ textarea { width: 100%; min-height: 120px; padding: 14px 16px; border: 1px solid
 .settings fieldset { margin: 0; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 20px;
   padding: 6px 24px 18px; box-shadow: var(--shadow); }
 .settings label { display: block; margin: 10px 0; }
+.settings label.btn { display: inline-block; margin: 0; }
 .settings input[type=number] { width: 64px; }
 .settings select, .settings input[type=number] { padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 8px;
   background: var(--bg); color: var(--ink); font: inherit; }

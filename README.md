@@ -57,6 +57,7 @@ gene names, and phrases. Inflected forms ("polymorphisms", "ran") are filed unde
 | `app.*` | Dashboard: Review, Words, Clips, Readings, Settings |
 | `clips.js` | Clips tab: projects, outline, drag and drop, exports |
 | `cite.js` | Citation styles, BibTeX and RIS |
+| `obsidian.js` | Export to an Obsidian vault as linked notes |
 | `popup.*` | Toolbar popup |
 | `viewer.*` | PDF viewer built on pdf.js (`lib/`, Apache-2.0) |
 | `fonts/` | Fraunces typeface (SIL Open Font License) |
