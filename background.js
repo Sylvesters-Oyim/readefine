@@ -45,8 +45,18 @@ async function injectIntoOpenTabs() {
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'toggle-draw') return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id >= 0) chrome.tabs.sendMessage(tab.id, { type: 'draw' }).catch(() => {});
+  if (!(tab?.id >= 0)) return;
+  await activate(tab.id); // the shortcut counts as a click, so this works with site access "On click"
+  chrome.tabs.sendMessage(tab.id, { type: 'draw' }).catch(() => {});
 });
+
+// With site access set to "On click", Chrome only lets Readefine into a tab once you click its icon or
+// use its shortcut. This switches it on in that tab. Safe to repeat: the scripts guard against running twice.
+async function activate(tabId) {
+  const target = { tabId, allFrames: true };
+  await chrome.scripting.insertCSS({ target, files: ['marks.css'] }).catch(() => {});
+  await chrome.scripting.executeScript({ target, files: ['content.js', 'draw.js'] }).catch(() => {});
+}
 
 // ---------- Dictionary lookup ----------
 

@@ -3,6 +3,15 @@ import { getWords, getClipData, dueList, progress } from './store.js';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Opening this popup is the "click" Chrome waits for when site access is "On click":
+// switch Readefine on in the current tab right away.
+const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+if (activeTab?.id >= 0 && /^(https?|file):/.test(activeTab.url || '')) {
+  const target = { tabId: activeTab.id, allFrames: true };
+  chrome.scripting.insertCSS({ target, files: ['marks.css'] }).catch(() => {});
+  chrome.scripting.executeScript({ target, files: ['content.js', 'draw.js'] }).catch(() => {});
+}
+
 const words = await getWords();
 const { clips } = await getClipData();
 const p = progress(words, clips);

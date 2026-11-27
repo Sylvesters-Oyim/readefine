@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Readefine",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Define words as you read and learn them by teach-back. Clip passages with citations and arrange them into a literature review.",
   "permissions": [
     "storage",
@@ -10,7 +10,8 @@
     "notifications",
     "contextMenus",
     "tabs",
-    "scripting"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"
