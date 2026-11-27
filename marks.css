@@ -9,3 +9,19 @@ readefine-mark[data-status="known"] { text-decoration-color: rgba(23, 105, 90, .
 readefine-mark:hover { background: rgba(255, 216, 77, .28); border-radius: 2px; }
 /* PDF text layers draw transparent text over the page image: keep the underline visible there. */
 .textLayer readefine-mark { text-decoration-color: rgba(214, 160, 0, .95); }
+
+/* Pen underlines (R / O / B): like underlining a printed page. */
+readefine-ul {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 2.5px;
+  text-decoration-color: var(--rd-pen, #e03131);
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+}
+readefine-ul[data-color="red"] { --rd-pen: #e03131; }
+readefine-ul[data-color="orange"] { --rd-pen: #f08c00; }
+readefine-ul[data-color="blue"] { --rd-pen: #1c7ed6; }
+readefine-ul.rd-flash { animation: rd-flash 1.4s ease; border-radius: 2px; }
+@keyframes rd-flash { 0%, 45% { background: rgba(255, 216, 77, .65); } 100% { background: transparent; } }

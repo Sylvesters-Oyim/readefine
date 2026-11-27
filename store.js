@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS = {
   quietEnd: 8,
   dblclick: true,
   highlightSaved: true,
-  autoPdf: true,
+  autoPdf: false,
 };
 
 export async function getWords() {

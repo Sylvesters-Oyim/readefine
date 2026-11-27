@@ -61,7 +61,10 @@ async function layout() {
   docEl.textContent = '';
   const first = await pdf.getPage(1);
   const base = first.getViewport({ scale: 1 });
-  const fit = Math.min((docEl.clientWidth - 32) / base.width, 1.6);
+  // A hidden or tiny window can report ~0 width; never lay pages out at zero size.
+  const avail = (docEl.clientWidth || window.innerWidth) - 32;
+  const fit = avail > 100 ? Math.min(avail / base.width, 1.6) : 1;
+  laidOutWidth = docEl.clientWidth;
   const scale = fit * zoom;
   $('zoom').textContent = `${Math.round(zoom * 100)}%`;
 
@@ -176,6 +179,16 @@ function setZoom(z) {
   zoom = Math.min(3, Math.max(0.5, z));
   layout().then(() => window.scrollTo(0, ratio * document.body.scrollHeight));
 }
+
+// Re-fit when the window is resized (or first becomes visible at a real size).
+let laidOutWidth = 0;
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (pdf && Math.abs(docEl.clientWidth - laidOutWidth) > 40) setZoom(zoom);
+  }, 250);
+});
 
 $('zoomIn').onclick = () => setZoom(zoom + 0.15);
 $('zoomOut').onclick = () => setZoom(zoom - 0.15);

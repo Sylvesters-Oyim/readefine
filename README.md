@@ -31,8 +31,19 @@ and an unpacked `dist/firefox/`.
 - **Double-click** a word → definition card, saved automatically (Undo if you didn't mean it).
 - **Select** a word or short phrase → a small *Define* chip appears. Right-click → *Define with
   Readefine* works too.
-- **PDFs** open in Readefine's own viewer automatically, so highlighting works there as well.
-  "Browser viewer" in the toolbar switches back to Chrome's viewer.
+- **PDFs** open in the browser's own viewer by default. To define, clip or mark up a PDF, open it in
+  Readefine's viewer with the popup's **PDF** button (or turn on automatic opening in Settings).
+
+## Marking up pages like a printed book
+
+- **Underline pens:** select text, then press **R** (red: important), **O** (orange: check later) or
+  **B** (blue: my idea), or click a coloured dot in the selection bar. Underlines stay on that page in
+  this browser and come back when you return; they never become clips or words. Click one to recolour
+  or remove it; the corner counter jumps between underlines of each colour.
+- **Drawing pen:** **Alt+D** (or the popup's **Draw** button) turns the pointer into a pen: red, orange,
+  blue, black, or a yellow highlighter, with eraser, undo (Ctrl+Z) and clear page. Esc or Done stops.
+  In Readefine's PDF viewer drawings stick to the PDF page, even when zooming; on web pages they can
+  drift if the page's layout changes.
 - **Review** (dashboard or the reminder notification): type what the word means in your own
   words, compare with the definition, and mark *I got it* / *Not yet*.
 
@@ -72,7 +83,8 @@ gene names, and phrases. Inflected forms ("polymorphisms", "ran") are filed unde
 | --- | --- |
 | `background.js` | Lookups, saving, reminders, badge, PDF redirect |
 | `content.js` | The in-page card and saved-word underlines (also loaded by the PDF viewer) |
-| `marks.css` | Underline style for saved words |
+| `marks.css` | Styles for saved-word and pen underlines |
+| `draw.js` | Drawing pen (Alt+D) |
 | `store.js` | Storage + spaced-repetition rules, shared by everything |
 | `app.*` | Dashboard: Review, Words, Clips, Readings, Settings |
 | `clips.js` | Clips tab: projects, outline, drag and drop, exports |

@@ -3,6 +3,13 @@
   if (window.__readefine) return;
   window.__readefine = true;
 
+  // Underline pens, like marking a printed page. R / O / B on the keyboard.
+  const PENS = {
+    red: { color: '#e03131', label: 'Important', key: 'r' },
+    orange: { color: '#f08c00', label: 'Check later', key: 'o' },
+    blue: { color: '#1c7ed6', label: 'My idea', key: 'b' },
+  };
+
   let dblclick = true;
   chrome.storage.local.get('settings').then(({ settings = {} }) => {
     if (settings.dblclick === false) dblclick = false;
@@ -42,6 +49,23 @@
     .chip span { padding: 6px 13px; cursor: pointer; }
     .chip span + span { border-left: 1px solid rgba(255,255,255,.18); }
     .chip span:hover { background: rgba(255,255,255,.12); }
+    .chip .pens { display: flex; gap: 6px; align-items: center; padding: 6px 11px; }
+    .chip .pens:hover { background: none; }
+    .chip .pens i { width: 15px; height: 15px; border-radius: 50%; background: var(--pen); cursor: pointer;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.25); transition: transform .12s; }
+    .chip .pens i:hover { transform: scale(1.25); }
+    .pen-pop, .pen-nav { position: fixed; display: flex; align-items: center; gap: 7px; padding: 7px 10px; z-index: 1;
+      font: 600 12px system-ui, sans-serif; color: #fffdf8; background: #1b2230; border-radius: 999px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25); animation: pop .15s ease both; }
+    .pen-pop i, .pen-nav i { width: 14px; height: 14px; border-radius: 50%; background: var(--pen); cursor: pointer;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.2); }
+    .pen-pop i.on { box-shadow: 0 0 0 2px #fffdf8; }
+    .pen-pop button { border: 0; background: none; color: #fffdf8; font: inherit; cursor: pointer; padding: 0 2px; opacity: .8; }
+    .pen-pop button:hover { opacity: 1; }
+    .pen-nav { position: fixed; right: 16px; bottom: 16px; gap: 10px; }
+    .pen-nav span { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+    .pen-nav span:hover { opacity: .8; }
+    .pen-nav .x { position: static; color: #fffdf8; font-size: 14px; padding: 0 0 0 2px; }
     .card { width: 350px; max-width: calc(100vw - 24px); padding: 16px 18px 12px; }
     .card::before { content: ''; position: absolute; left: 18px; right: 18px; top: 0; height: 3px; border-radius: 0 0 3px 3px;
       background: linear-gradient(90deg, var(--accent), var(--marker)); }
@@ -307,12 +331,17 @@
     const page = pageOf(range);
     chip = document.createElement('div');
     chip.className = 'chip';
-    chip.innerHTML = `${word ? '<span data-define>📖 Define</span>' : ''}<span data-clip>📌 Clip</span>`;
+    chip.innerHTML = `${word ? '<span data-define>📖 Define</span>' : ''}<span data-clip>📌 Clip</span>
+      <span class="pens">${Object.entries(PENS).map(([c, p]) =>
+        `<i data-pen="${c}" style="--pen:${p.color}" title="Underline: ${p.label} (press ${p.key.toUpperCase()})"></i>`).join('')}</span>`;
     chip.addEventListener('mousedown', (e) => e.preventDefault()); // keep the selection
     chip.querySelector('[data-define]')?.addEventListener('click', () => define(word, pos, sentence));
     chip.querySelector('[data-clip]').addEventListener('click', () => clipIt(text, pos, page));
+    for (const pen of chip.querySelectorAll('[data-pen]')) {
+      pen.addEventListener('click', () => { underlineSelection(pen.dataset.pen); clear(); });
+    }
     root.appendChild(chip);
-    place(chip, pos, word ? 170 : 80);
+    place(chip, pos, word ? 260 : 170);
   }
 
   // ---------- Events ----------
@@ -338,7 +367,18 @@
     }
   }, true);
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') clear(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') clear();
+    // Pen shortcuts: select text, then R / O / B. Only with a selection and outside text fields.
+    if (e.ctrlKey || e.metaKey || e.altKey || editable(e.target)) return;
+    const pen = Object.keys(PENS).find((c) => PENS[c].key === e.key.toLowerCase());
+    const sel = window.getSelection();
+    if (!pen || !sel || sel.isCollapsed || !/\S/.test(sel.toString())) return;
+    e.preventDefault();
+    e.stopPropagation();
+    underlineSelection(pen);
+    clear();
+  }, true);
 
   // Right-click menu → "Define with Readefine" / "Clip selection to Readefine"
   chrome.runtime.onMessage.addListener((msg) => {
@@ -362,7 +402,7 @@
   });
   // ---------- Saved words, underlined wherever you read ----------
   const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'CODE', 'PRE',
-    'SVG', 'MATH', 'TITLE', 'HEAD', 'READEFINE-MARK', 'READEFINE-LAYER', 'BUTTON']);
+    'SVG', 'MATH', 'TITLE', 'HEAD', 'READEFINE-MARK', 'READEFINE-LAYER', 'READEFINE-UL', 'BUTTON']);
   let matcher = null; // { re, info: Map(lowercase form → { status, title }) }
   let marking = true;
   let observer = null;
@@ -424,7 +464,7 @@
   function unmarkAll() {
     for (const m of document.querySelectorAll('readefine-mark')) {
       const parent = m.parentNode;
-      m.replaceWith(m.textContent);
+      m.replaceWith(...m.childNodes); // keep any pen underline inside the word
       parent?.normalize();
     }
   }
@@ -461,4 +501,231 @@
     if (c.settings) marking = c.settings.newValue?.highlightSaved !== false;
     if (c.words || c.settings) chrome.storage.local.get('words').then(({ words }) => idle(() => refreshMarks(words)));
   });
+
+  // ---------- Pens: coloured underlines that stay on the page (never clips or words) ----------
+  // Stored per page and found again on your next visit by their text plus a little of what precedes it.
+  const pageKey = () => (window.__readefineSource || location.href).split('#')[0];
+  const NO_INDEX = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'TITLE']);
+  let lines = [];   // underlines saved for this page
+  let pending = []; // saved but not found yet (page still loading, PDF page not rendered)
+  let pop = null;
+  let nav = null;
+  let navHidden = false;
+  const cycle = {};
+
+  async function saveLines() {
+    const { underlines = {} } = await chrome.storage.local.get('underlines');
+    if (lines.length) underlines[pageKey()] = lines; else delete underlines[pageKey()];
+    await chrome.storage.local.set({ underlines });
+  }
+
+  // Page text as non-space characters, with where each one lives. Ignoring whitespace makes
+  // selections across paragraphs, line breaks and PDF text layers line up with what's stored.
+  function textIndex() {
+    let hay = '';
+    const map = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (NO_INDEX.has(n.parentElement?.tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    for (let n; (n = walker.nextNode());) {
+      for (let i = 0; i < n.data.length; i++) {
+        if (!/\s/.test(n.data[i])) { hay += n.data[i]; map.push([n, i]); }
+      }
+    }
+    return { hay, map };
+  }
+
+  function wrap(map, start, end, line) {
+    // Group the characters by text node, then wrap each node's slice in its own element.
+    const groups = [];
+    for (let k = start; k < end; k++) {
+      const [n, i] = map[k];
+      const g = groups.at(-1);
+      if (g && g.node === n) g.to = i + 1; else groups.push({ node: n, from: i, to: i + 1 });
+    }
+    for (const { node, from, to } of groups) {
+      let mid = node;
+      if (from > 0) mid = node.splitText(from);
+      if (to - from < mid.data.length) mid.splitText(to - from);
+      const el = document.createElement('readefine-ul');
+      el.dataset.color = line.color;
+      el.dataset.id = line.id;
+      el.title = `${PENS[line.color].label} · ${new Date(line.created).toLocaleString(undefined,
+        { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · click to change`;
+      mid.replaceWith(el);
+      el.append(mid);
+    }
+  }
+
+  function underlineSelection(color) {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const { hay, map } = textIndex();
+    let start = -1;
+    let end = -1;
+    for (let k = 0; k < map.length; k++) {
+      const [n, i] = map[k];
+      if (!range.intersectsNode(n) || range.comparePoint(n, i) < 0) continue;
+      if (range.comparePoint(n, i + 1) > 0) break;
+      if (start < 0) start = k;
+      end = k + 1;
+    }
+    if (start < 0) return;
+    const line = {
+      id: crypto.randomUUID().slice(0, 8), color, created: Date.now(),
+      text: hay.slice(start, end), before: hay.slice(Math.max(0, start - 32), start),
+    };
+    wrap(map, start, end, line);
+    sel.removeAllRanges();
+    lines.push(line);
+    saveLines();
+    renderNav();
+  }
+
+  // Best match for a stored underline: same text, preferring the spot whose preceding text matches.
+  function locate(hay, line) {
+    let best = -1;
+    let bestScore = -1;
+    for (let at = hay.indexOf(line.text); at >= 0; at = hay.indexOf(line.text, at + 1)) {
+      let score = 0;
+      while (score < line.before.length && hay[at - 1 - score] === line.before[line.before.length - 1 - score]) score++;
+      if (score > bestScore) { best = at; bestScore = score; }
+      if (score === line.before.length) break;
+    }
+    return best;
+  }
+
+  function restore() {
+    if (!pending.length || !document.body) return;
+    let { hay, map } = textIndex();
+    const found = [];
+    pending = pending.filter((line) => {
+      const at = locate(hay, line);
+      if (at < 0) return true;
+      found.push({ line, at });
+      return false;
+    });
+    // Wrap from the bottom of the page up, so earlier positions in the index stay valid.
+    found.sort((a, b) => b.at - a.at);
+    let floor = Infinity;
+    for (const { line, at } of found) {
+      if (at + line.text.length > floor) ({ hay, map } = textIndex()); // overlapping underlines: re-index
+      const pos = at + line.text.length > floor ? locate(hay, line) : at;
+      if (pos >= 0) wrap(map, pos, pos + line.text.length, line);
+      floor = Math.min(floor, pos);
+    }
+    if (found.length) renderNav();
+  }
+
+  function elementsOf(id) { return document.querySelectorAll(`readefine-ul[data-id="${CSS.escape(id)}"]`); }
+
+  function removeLine(id) {
+    for (const el of elementsOf(id)) {
+      const parent = el.parentNode;
+      el.replaceWith(...el.childNodes);
+      parent?.normalize();
+    }
+    lines = lines.filter((l) => l.id !== id);
+    saveLines();
+    renderNav();
+  }
+
+  function recolour(id, color) {
+    const line = lines.find((l) => l.id === id);
+    if (!line) return;
+    line.color = color;
+    for (const el of elementsOf(id)) el.dataset.color = color;
+    saveLines();
+    renderNav();
+  }
+
+  function closePop() { pop?.remove(); pop = null; }
+
+  function showPop(el, x, y) {
+    closePop();
+    mount();
+    const id = el.dataset.id;
+    pop = document.createElement('div');
+    pop.className = 'pen-pop';
+    pop.innerHTML = `${Object.entries(PENS).map(([c, p]) =>
+      `<i data-pen="${c}" class="${c === el.dataset.color ? 'on' : ''}" style="--pen:${p.color}" title="${p.label}"></i>`).join('')}
+      <button data-remove title="Remove underline">Remove</button>`;
+    pop.style.left = `${Math.min(x, window.innerWidth - 170)}px`;
+    pop.style.top = `${Math.min(y + 14, window.innerHeight - 50)}px`;
+    pop.addEventListener('mousedown', (e) => e.preventDefault());
+    for (const i of pop.querySelectorAll('[data-pen]')) i.addEventListener('click', () => { recolour(id, i.dataset.pen); closePop(); });
+    pop.querySelector('[data-remove]').addEventListener('click', () => { removeLine(id); closePop(); });
+    root.appendChild(pop);
+  }
+
+  // Corner pill: how many underlines of each colour, click a colour to jump through them.
+  function renderNav() {
+    const ids = {};
+    for (const el of document.querySelectorAll('readefine-ul')) (ids[el.dataset.color] ||= new Set()).add(el.dataset.id);
+    const total = Object.values(ids).reduce((n, s) => n + s.size, 0);
+    if (!total || navHidden) { nav?.remove(); nav = null; return; }
+    mount();
+    if (!nav) {
+      nav = document.createElement('div');
+      nav.className = 'pen-nav';
+      nav.addEventListener('mousedown', (e) => e.preventDefault());
+      nav.addEventListener('click', (e) => {
+        if (e.target.closest('.x')) { navHidden = true; renderNav(); return; }
+        const color = e.target.closest('[data-color]')?.dataset.color;
+        if (color) jump(color);
+      });
+      root.appendChild(nav);
+    }
+    nav.innerHTML = `${Object.keys(PENS).filter((c) => ids[c]).map((c) =>
+      `<span data-color="${c}" title="Jump to the next ${PENS[c].label.toLowerCase()} underline"><i style="--pen:${PENS[c].color}"></i>${ids[c].size}</span>`).join('')}
+      <button class="x" title="Hide">×</button>`;
+  }
+
+  function jump(color) {
+    // Underlines of this colour in page order, one entry per underline.
+    const seen = new Set();
+    const firsts = [...document.querySelectorAll(`readefine-ul[data-color="${color}"]`)]
+      .filter((el) => !seen.has(el.dataset.id) && seen.add(el.dataset.id));
+    if (!firsts.length) return;
+    cycle[color] = ((cycle[color] ?? -1) + 1) % firsts.length;
+    const el = firsts[cycle[color]];
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    for (const part of elementsOf(el.dataset.id)) {
+      part.classList.remove('rd-flash');
+      void part.offsetWidth; // restart the animation
+      part.classList.add('rd-flash');
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const ul = e.target.closest?.('readefine-ul');
+    if (!ul || e.target.closest('a') || !window.getSelection().isCollapsed) return;
+    showPop(ul, e.clientX, e.clientY);
+  }, true);
+  document.addEventListener('mousedown', (e) => { if (pop && !e.composedPath().includes(host)) closePop(); }, true);
+
+  async function startPens() {
+    // In the PDF viewer, wait until it knows which PDF is open so underlines are filed under that PDF.
+    if (location.pathname.endsWith('/viewer.html')) {
+      for (let i = 0; i < 100 && !window.__readefineSource; i++) await new Promise((r) => setTimeout(r, 100));
+    }
+    const { underlines = {} } = await chrome.storage.local.get('underlines');
+    lines = underlines[pageKey()] || [];
+    pending = [...lines];
+    restore();
+    if (!pending.length) return;
+    // Content that arrives later (feeds, PDF pages as you scroll): keep looking until all are found.
+    let timer = null;
+    const watcher = new MutationObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        watcher.disconnect();
+        restore();
+        if (pending.length) watcher.observe(document.body, { childList: true, subtree: true });
+      }, 700);
+    });
+    watcher.observe(document.body, { childList: true, subtree: true });
+  }
+  idle(() => startPens());
 })();

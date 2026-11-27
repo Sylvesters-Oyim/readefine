@@ -6,7 +6,13 @@ import {
 const APP = chrome.runtime.getURL('app.html');
 const VIEWER = chrome.runtime.getURL('viewer.html');
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
+  // v1.6: PDFs no longer open in Readefine by default. Turn it off once for anyone who had it saved as on.
+  const { settings, pdfDefaultMigrated } = await chrome.storage.local.get(['settings', 'pdfDefaultMigrated']);
+  if (!pdfDefaultMigrated) {
+    if (settings) await chrome.storage.local.set({ settings: { ...settings, autoPdf: false } });
+    await chrome.storage.local.set({ pdfDefaultMigrated: true });
+  }
   chrome.alarms.create('check', { periodInMinutes: 15 });
   chrome.contextMenus.create({
     id: 'define',

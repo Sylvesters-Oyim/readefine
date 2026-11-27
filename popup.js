@@ -36,6 +36,15 @@ const open = async (hash) => {
 $('#review').onclick = () => open('#review');
 $('#words').onclick = () => open('#words');
 $('#clips').onclick = () => open('#clips');
+$('#draw').onclick = async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: 'draw' });
+    window.close();
+  } catch {
+    $('#result').innerHTML = '<span class="hint">Can’t draw here. Refresh the page first (it won’t work on browser pages like the Web Store).</span>';
+  }
+};
 
 // If the current tab looks like a PDF, open that one; otherwise open an empty viewer to pick a file.
 $('#pdf').onclick = async () => {

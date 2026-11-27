@@ -27,7 +27,7 @@
     #result:not(:empty) { margin-top: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 14px;
       padding: 12px 14px; font-size: 14px; animation: rise .25s ease both; }
     #result .w { font-size: 21px; }
-    .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
     .tiles button { display: grid; gap: 2px; justify-items: start; text-align: left; padding: 10px 12px; border-radius: 14px; }
     .tiles b { font: 600 20px var(--serif); }
     .tiles span { font-size: 12px; color: var(--muted); }
@@ -48,8 +48,9 @@
       <button id="words"><span class="ico">📖</span><b id="nWords">0</b><span>words</span></button>
       <button id="clips"><span class="ico">📌</span><b id="nClips">0</b><span>clips</span></button>
       <button id="pdf"><span class="ico">📄</span><b>PDF</b><span>open one</span></button>
+      <button id="draw" title="Draw on this page (Alt+D)"><span class="ico">✏️</span><b>Draw</b><span>Alt+D</span></button>
     </div>
-    <div class="foot"><span>Double-click any word to define it</span><span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd></span></div>
+    <div class="foot"><span>Select text, press <kbd>R</kbd> <kbd>O</kbd> <kbd>B</kbd> to underline</span><span><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd></span></div>
   </div>
   <script type="module" src="popup.js"></script>
 </body>
