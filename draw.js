@@ -1,4 +1,4 @@
-// Readefine drawing pen: draw on any page or PDF like in a printed book. Alt+D (or the popup) to start.
+// Readefine drawing pen: draw on any page or PDF like in a printed book. Alt+Shift+D (or the popup) to start.
 // Drawings are kept per page in this browser only. On web pages they're placed in page coordinates,
 // so they can drift if the page's layout changes; in Readefine's PDF viewer they stick to the PDF page.
 (() => {
@@ -203,11 +203,8 @@
   }
 
   document.addEventListener('keydown', (e) => {
-    const typing = e.target.closest?.('input,textarea,[contenteditable=""],[contenteditable="true"]');
-    if (e.altKey && !e.ctrlKey && (e.key === 'd' || e.key === 'D' || e.code === 'KeyD') && !typing) {
-      e.preventDefault();
-      toggle();
-    } else if (active && e.key === 'Escape') {
+    // Starting is done by the browser-registered shortcut (see background.js), which can't clash with Chrome's own.
+    if (active && e.key === 'Escape') {
       toggle(false);
     } else if (active && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
       e.preventDefault();

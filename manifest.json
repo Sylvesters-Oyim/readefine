@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Readefine",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Define words as you read and learn them by teach-back. Clip passages with citations and arrange them into a literature review.",
   "permissions": [
     "storage",
@@ -9,7 +9,8 @@
     "alarms",
     "notifications",
     "contextMenus",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -53,6 +54,12 @@
       "suggested_key": {
         "default": "Alt+Shift+R"
       }
+    },
+    "toggle-draw": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "Draw on this page"
     }
   },
   "web_accessible_resources": [

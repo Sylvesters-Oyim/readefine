@@ -40,7 +40,7 @@ and an unpacked `dist/firefox/`.
   **B** (blue: my idea), or click a coloured dot in the selection bar. Underlines stay on that page in
   this browser and come back when you return; they never become clips or words. Click one to recolour
   or remove it; the corner counter jumps between underlines of each colour.
-- **Drawing pen:** **Alt+D** (or the popup's **Draw** button) turns the pointer into a pen: red, orange,
+- **Drawing pen:** **Alt+Shift+D** (or the popup's **Draw** button) turns the pointer into a pen: red, orange,
   blue, black, or a yellow highlighter, with eraser, undo (Ctrl+Z) and clear page. Esc or Done stops.
   In Readefine's PDF viewer drawings stick to the PDF page, even when zooming; on web pages they can
   drift if the page's layout changes.
@@ -84,7 +84,7 @@ gene names, and phrases. Inflected forms ("polymorphisms", "ran") are filed unde
 | `background.js` | Lookups, saving, reminders, badge, PDF redirect |
 | `content.js` | The in-page card and saved-word underlines (also loaded by the PDF viewer) |
 | `marks.css` | Styles for saved-word and pen underlines |
-| `draw.js` | Drawing pen (Alt+D) |
+| `draw.js` | Drawing pen (Alt+Shift+D) |
 | `store.js` | Storage + spaced-repetition rules, shared by everything |
 | `app.*` | Dashboard: Review, Words, Clips, Readings, Settings |
 | `clips.js` | Clips tab: projects, outline, drag and drop, exports |

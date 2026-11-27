@@ -14,6 +14,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     await chrome.storage.local.set({ pdfDefaultMigrated: true });
   }
   chrome.alarms.create('check', { periodInMinutes: 15 });
+  await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
     id: 'define',
     title: 'Define “%s” with Readefine',
@@ -25,9 +26,27 @@ chrome.runtime.onInstalled.addListener(async () => {
     contexts: ['selection'],
   });
   refreshBadge();
+  injectIntoOpenTabs();
 });
 
 chrome.runtime.onStartup.addListener(refreshBadge);
+
+// After installing or updating, add Readefine to tabs that are already open, so they work without a refresh.
+async function injectIntoOpenTabs() {
+  const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*', 'file:///*'] });
+  for (const tab of tabs) {
+    const target = { tabId: tab.id, allFrames: true };
+    chrome.scripting.insertCSS({ target, files: ['marks.css'] }).catch(() => {});
+    chrome.scripting.executeScript({ target, files: ['content.js', 'draw.js'] }).catch(() => {}); // e.g. the Web Store blocks it
+  }
+}
+
+// Drawing pen shortcut (Alt+Shift+D by default; changeable in chrome://extensions/shortcuts).
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command !== 'toggle-draw') return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id >= 0) chrome.tabs.sendMessage(tab.id, { type: 'draw' }).catch(() => {});
+});
 
 // ---------- Dictionary lookup ----------
 
